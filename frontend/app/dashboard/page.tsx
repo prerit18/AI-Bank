@@ -3,38 +3,26 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "@/context/SessionContext";
-import { accounts, transactions, Account, Transaction } from "@/lib/api";
+import { dashboard, DashboardSummary } from "@/lib/api";
 import AccountCard from "@/components/AccountCard";
 import TransactionList from "@/components/TransactionList";
 
 export default function DashboardPage() {
   const { customer } = useSession();
-  const [account, setAccount] = useState<Account | null>(null);
-  const [txns, setTxns] = useState<Transaction[]>([]);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!customer) return;
-    (async () => {
-      try {
-        const accs = await accounts.getByCustomer(customer.customer_id);
-        const active = accs.find((a) => a.status === "active") ?? accs[0] ?? null;
-        setAccount(active);
-        if (active) {
-          const t = await transactions.getByAccount(active.account_id, 10);
-          setTxns(t);
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
+    dashboard
+      .summary(customer.customer_id)
+      .then(setSummary)
+      .finally(() => setLoading(false));
   }, [customer]);
 
-  if (loading) {
-    return <div className="text-gray-400 text-sm">Loading…</div>;
-  }
+  if (loading) return <div className="text-gray-400 text-sm">Loading…</div>;
 
-  if (!account) {
+  if (!summary?.account) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-20 text-center">
         <div className="text-5xl mb-4">🏦</div>
@@ -50,6 +38,8 @@ export default function DashboardPage() {
     );
   }
 
+  const { account, recent_transactions } = summary;
+
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
@@ -59,7 +49,6 @@ export default function DashboardPage() {
         <p className="text-sm text-gray-500">Here&apos;s your account overview.</p>
       </div>
 
-      {/* Account card + quick actions */}
       <div className="flex flex-wrap gap-6 items-start">
         <AccountCard account={account} />
 
@@ -85,10 +74,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Last 10 transactions */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="text-base font-semibold text-gray-800 mb-4">Recent Transactions</h2>
-        <TransactionList transactions={txns} />
+        <TransactionList transactions={recent_transactions} />
       </div>
     </div>
   );

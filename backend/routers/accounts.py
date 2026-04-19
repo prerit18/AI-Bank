@@ -1,3 +1,4 @@
+import random
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -8,15 +9,27 @@ import models, schemas
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
+def _generate_account_number(db: Session) -> str:
+    for _ in range(10):
+        number = str(random.randint(10000000, 99999999))
+        if not db.query(models.Account).filter(models.Account.account_number == number).first():
+            return number
+    raise HTTPException(status_code=500, detail="Could not generate a unique account number")
+
+
 @router.post("/", response_model=schemas.AccountResponse, status_code=status.HTTP_201_CREATED)
 def create_account(account: schemas.AccountCreate, db: Session = Depends(get_db)):
     customer = db.query(models.Customer).filter(models.Customer.customer_id == account.customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
-    existing = db.query(models.Account).filter(models.Account.account_number == account.account_number).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Account number already exists")
-    db_account = models.Account(**account.model_dump())
+    db_account = models.Account(
+        customer_id=account.customer_id,
+        account_number=_generate_account_number(db),
+        sort_code=account.sort_code,
+        account_type=account.account_type,
+        currency=account.currency,
+        balance=0,
+    )
     db.add(db_account)
     db.commit()
     db.refresh(db_account)

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine
+from routers import auth, customers, accounts, beneficiaries, transactions, payments, dashboard
 from routers import customers, accounts, beneficiaries, transactions, auth
 from database import Base, engine
 from routers import customers, accounts, beneficiaries, transactions
@@ -22,6 +23,8 @@ app.include_router(customers.router)
 app.include_router(accounts.router)
 app.include_router(beneficiaries.router)
 app.include_router(transactions.router)
+app.include_router(payments.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/health")
