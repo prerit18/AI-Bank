@@ -57,12 +57,20 @@ class AccountBase(BaseModel):
     currency: str = "GBP"
     status: AccountStatus = AccountStatus.active
 
-    @field_validator("account_number")
+    @field_validator("sort_code")
     @classmethod
-    def validate_account_number(cls, v: str) -> str:
-        if not v.isdigit() or len(v) != 8:
-            raise ValueError("Account number must be 8 digits")
-        return v
+    def validate_sort_code(cls, v: str) -> str:
+        cleaned = v.replace("-", "")
+        if not cleaned.isdigit() or len(cleaned) != 6:
+            raise ValueError("Sort code must be 6 digits")
+        return cleaned
+
+
+class AccountCreate(BaseModel):
+    customer_id: int
+    account_type: AccountType = AccountType.current
+    currency: str = "GBP"
+    sort_code: str = "040004"
 
     @field_validator("sort_code")
     @classmethod
@@ -73,13 +81,8 @@ class AccountBase(BaseModel):
         return cleaned
 
 
-class AccountCreate(AccountBase):
-    pass
-
-
 class AccountUpdate(BaseModel):
     status: Optional[AccountStatus] = None
-    balance: Optional[Decimal] = None
 
 
 class AccountResponse(AccountBase):
