@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine
 from routers import customers, accounts, beneficiaries, transactions, auth
+from database import Base, engine
+from routers import customers, accounts, beneficiaries, transactions
 
 Base.metadata.create_all(bind=engine)
 
