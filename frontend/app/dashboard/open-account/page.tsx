@@ -12,10 +12,6 @@ interface OpenAccountForm {
   currency: string;
 }
 
-function randomAccountNumber(): string {
-  return String(Math.floor(10000000 + Math.random() * 90000000));
-}
-
 export default function OpenAccountPage() {
   const { customer } = useSession();
   const router = useRouter();
@@ -30,10 +26,7 @@ export default function OpenAccountPage() {
     try {
       await accounts.create({
         customer_id: customer.customer_id,
-        account_number: randomAccountNumber(),
-        sort_code: "040004",
         account_type: data.account_type,
-        balance: "0.00",
         currency: data.currency,
       });
       toast.success("Account opened successfully!");

@@ -17,6 +17,7 @@ MANIFEST
 .installed.cfg
 lib/
 lib64/
+!frontend/lib/
 .Python
 
 # Virtual environments

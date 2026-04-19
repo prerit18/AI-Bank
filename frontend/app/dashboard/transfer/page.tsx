@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { accounts, beneficiaries as beneApi, transactions, Account, Beneficiary } from "@/lib/api";
+import { accounts, beneficiaries as beneApi, payments, Account, Beneficiary } from "@/lib/api";
 import { useSession } from "@/context/SessionContext";
 
 interface TransferForm {
@@ -36,31 +36,20 @@ export default function TransferPage() {
   }, [customer]);
 
   const balance = account ? parseFloat(account.balance) : 0;
+  const insufficient = amount && parseFloat(String(amount)) > balance;
 
   const onSubmit = async (data: TransferForm) => {
     if (!account || !customer) return;
-    const amt = parseFloat(String(data.amount));
-    if (amt > balance) {
-      toast.error("Insufficient funds");
-      return;
-    }
     setLoading(true);
     try {
-      const newBalance = (balance - amt).toFixed(2);
-      await transactions.create({
+      await payments.transfer({
         account_id: account.account_id,
         customer_id: customer.customer_id,
         beneficiary_id: Number(data.beneficiary_id),
-        transaction_type: "payment",
-        amount: amt.toFixed(2),
-        currency: account.currency,
-        description: data.description || undefined,
+        amount: parseFloat(String(data.amount)).toFixed(2),
         reference: data.reference || undefined,
-        status: "completed",
-        transaction_date: new Date().toISOString().split("T")[0],
-        balance_after: newBalance,
+        description: data.description || undefined,
       });
-      await accounts.update(account.account_id, { balance: newBalance });
       toast.success("Payment sent successfully!");
       router.push("/dashboard");
     } catch (err: unknown) {
@@ -69,8 +58,6 @@ export default function TransferPage() {
       setLoading(false);
     }
   };
-
-  const insufficient = amount && parseFloat(String(amount)) > balance;
 
   return (
     <div className="max-w-md">

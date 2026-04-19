@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { accounts, transactions, Account } from "@/lib/api";
+import { accounts, payments, Account } from "@/lib/api";
 import { useSession } from "@/context/SessionContext";
 
 interface AddFundsForm {
@@ -29,24 +29,12 @@ export default function AddFundsPage() {
     if (!account || !customer) return;
     setLoading(true);
     try {
-      const currentBalance = parseFloat(account.balance);
-      const deposit = parseFloat(String(data.amount));
-      const newBalance = (currentBalance + deposit).toFixed(2);
-
-      await accounts.update(account.account_id, { balance: newBalance });
-      await transactions.create({
+      await payments.deposit({
         account_id: account.account_id,
         customer_id: customer.customer_id,
-        transaction_type: "credit",
-        amount: deposit.toFixed(2),
-        currency: account.currency,
-        description: "Funds added",
-        status: "completed",
-        transaction_date: new Date().toISOString().split("T")[0],
-        balance_after: newBalance,
+        amount: parseFloat(String(data.amount)).toFixed(2),
       });
-
-      toast.success(`£${deposit.toFixed(2)} added successfully!`);
+      toast.success(`£${parseFloat(String(data.amount)).toFixed(2)} added successfully!`);
       router.push("/dashboard");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to add funds");
