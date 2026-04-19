@@ -177,3 +177,82 @@ export const dashboard = {
   summary: (customerId: number) =>
     request<DashboardSummary>(`/dashboard/summary/${customerId}`),
 };
+
+// ── Fraud Analytics ───────────────────────────────────────────────────────────
+
+export type FraudAction = "block" | "review" | "flag";
+export type FraudSeverity = "low" | "medium" | "high" | "critical";
+export type FraudAlertStatus = "open" | "investigating" | "approved" | "rejected" | "false_positive";
+
+export interface FraudRule {
+  rule_id: number;
+  name: string;
+  description?: string;
+  condition: Record<string, unknown>;
+  action: FraudAction;
+  severity: FraudSeverity;
+  priority: number;
+  is_active: boolean;
+  created_by: string;
+  hit_count: number;
+  last_hit_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FraudAlert {
+  alert_id: number;
+  transaction_id: number;
+  customer_id: number;
+  rule_id: number;
+  rule_name?: string;
+  action: FraudAction;
+  severity: FraudSeverity;
+  status: FraudAlertStatus;
+  rule_snapshot?: Record<string, unknown>;
+  context_snapshot?: Record<string, string>;
+  analyst_notes?: string;
+  reviewed_by?: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export interface FraudStats {
+  total_alerts: number;
+  open_alerts: number;
+  by_severity: Record<string, number>;
+  by_action: Record<string, number>;
+  top_rules: { name: string; hit_count: number; action: string }[];
+}
+
+export const fraud = {
+  listRules: () => request<FraudRule[]>("/fraud/rules"),
+  getRule: (id: number) => request<FraudRule>(`/fraud/rules/${id}`),
+  createRule: (data: Omit<FraudRule, "rule_id" | "hit_count" | "last_hit_at" | "created_at" | "updated_at">) =>
+    request<FraudRule>("/fraud/rules", { method: "POST", body: JSON.stringify(data) }),
+  updateRule: (id: number, data: Partial<FraudRule>) =>
+    request<FraudRule>(`/fraud/rules/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteRule: (id: number) =>
+    request<void>(`/fraud/rules/${id}`, { method: "DELETE" }),
+  testRule: (condition: Record<string, unknown>, context: Record<string, unknown>) =>
+    request<{ matched: boolean; context: Record<string, unknown> }>("/fraud/rules/test", {
+      method: "POST",
+      body: JSON.stringify({ condition, context }),
+    }),
+  listAlerts: (params?: { status?: string; severity?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set("status", params.status);
+    if (params?.severity) qs.set("severity", params.severity);
+    return request<FraudAlert[]>(`/fraud/alerts${qs.toString() ? "?" + qs : ""}`);
+  },
+  getAlert: (id: number) => request<FraudAlert>(`/fraud/alerts/${id}`),
+  approveAlert: (id: number, analyst_email: string, notes?: string) =>
+    request(`/fraud/alerts/${id}/approve`, { method: "PATCH", body: JSON.stringify({ analyst_email, notes }) }),
+  rejectAlert: (id: number, analyst_email: string, notes?: string) =>
+    request(`/fraud/alerts/${id}/reject`, { method: "PATCH", body: JSON.stringify({ analyst_email, notes }) }),
+  investigateAlert: (id: number, analyst_email: string, notes?: string) =>
+    request(`/fraud/alerts/${id}/investigate`, { method: "PATCH", body: JSON.stringify({ analyst_email, notes }) }),
+  falsePositiveAlert: (id: number, analyst_email: string, notes?: string) =>
+    request(`/fraud/alerts/${id}/false-positive`, { method: "PATCH", body: JSON.stringify({ analyst_email, notes }) }),
+  getStats: () => request<FraudStats>("/fraud/stats"),
+};

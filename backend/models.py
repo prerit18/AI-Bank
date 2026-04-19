@@ -131,3 +131,68 @@ class Transaction(Base):
     account = relationship("Account", back_populates="transactions")
     customer = relationship("Customer", back_populates="transactions")
     beneficiary = relationship("Beneficiary", back_populates="transactions")
+
+
+# ── Fraud Analytics ───────────────────────────────────────────────────────────
+
+class FraudRuleAction(str, enum.Enum):
+    block = "block"
+    review = "review"
+    flag = "flag"
+
+
+class FraudSeverity(str, enum.Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+    critical = "critical"
+
+
+class FraudAlertStatus(str, enum.Enum):
+    open = "open"
+    investigating = "investigating"
+    approved = "approved"
+    rejected = "rejected"
+    false_positive = "false_positive"
+
+
+class FraudRule(Base):
+    __tablename__ = "fraud_rules"
+
+    rule_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    description = Column(String(1000), nullable=True)
+    condition = Column(String(4000), nullable=False)  # JSON stored as string
+    action = Column(SAEnum(FraudRuleAction), nullable=False)
+    severity = Column(SAEnum(FraudSeverity), nullable=False)
+    priority = Column(Integer, nullable=False, default=50)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_by = Column(String(255), nullable=False, default="system")
+    hit_count = Column(Integer, nullable=False, default=0)
+    last_hit_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    alerts = relationship("FraudAlert", back_populates="rule")
+
+
+class FraudAlert(Base):
+    __tablename__ = "fraud_alerts"
+
+    alert_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    transaction_id = Column(Integer, ForeignKey("transactions.transaction_id"), nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.customer_id"), nullable=False, index=True)
+    rule_id = Column(Integer, ForeignKey("fraud_rules.rule_id"), nullable=False, index=True)
+    action = Column(SAEnum(FraudRuleAction), nullable=False)
+    severity = Column(SAEnum(FraudSeverity), nullable=False)
+    status = Column(SAEnum(FraudAlertStatus), nullable=False, default=FraudAlertStatus.open)
+    rule_snapshot = Column(String(4000), nullable=True)   # JSON
+    context_snapshot = Column(String(4000), nullable=True)  # JSON
+    analyst_notes = Column(String(2000), nullable=True)
+    reviewed_by = Column(String(255), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    reviewed_at = Column(DateTime, nullable=True)
+
+    rule = relationship("FraudRule", back_populates="alerts")
+    customer = relationship("Customer")
+    transaction = relationship("Transaction")
