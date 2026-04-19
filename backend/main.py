@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from database import Base, engine, SessionLocal
+from routers import auth, customers, accounts, beneficiaries, transactions, payments, dashboard, fraud
 from database import Base, engine
 from routers import auth, customers, accounts, beneficiaries, transactions, payments, dashboard
 from routers import customers, accounts, beneficiaries, transactions, auth
@@ -25,6 +27,17 @@ app.include_router(beneficiaries.router)
 app.include_router(transactions.router)
 app.include_router(payments.router)
 app.include_router(dashboard.router)
+app.include_router(fraud.router)
+
+
+@app.on_event("startup")
+def seed_on_startup():
+    from fraud.seeds import seed_rules
+    db = SessionLocal()
+    try:
+        seed_rules(db)
+    finally:
+        db.close()
 
 
 @app.get("/health")
